@@ -61,10 +61,10 @@ Maximize:
 
 ## NAVIGATION
 
-- [00_OVERVIEW/](00_OVERVIEW/) — Mission, architecture, data governance
-- [01_DATA-COMMITTEE/](01_DATA-COMMITTEE/) — GOD FILE, master schema, core data models
+- [00_OVERVIEW/](00_OVERVIEW/) — Mission, Architecture, Data Governance, Canonical Objects, Control Layer, Data Firewall, System State Graph, Failure Modes
+- [01_DATA-COMMITTEE/](01_DATA-COMMITTEE/) — GOD File, Master Schema, Donor State Model, District Personality, Model Registry, Feature Lineage, Compatibility Matrix
 - [02_INTELLIGENCE-BRAIN/](02_INTELLIGENCE-BRAIN/) — Authority Index, Volatility Index, Policy Domain Vector
 - [03_FUNDRAISING-ENGINE/](03_FUNDRAISING-ENGINE/) — Donor scoring, ML models, LP optimization, revenue forecasting
 - [04_CANDIDATE-PORTAL/](04_CANDIDATE-PORTAL/) — Activation pipeline, core donor files, volunteer matching
-- [05_AUTOMATION/](05_AUTOMATION/) — Trigger logic, channel weighting, surge detection
+- [05_AUTOMATION/](05_AUTOMATION/) — Trigger Logic, Channel Weighting, Surge Detection, Resource Constraint Spec
 - [99_CHANGELOG/](99_CHANGELOG/) — Version history

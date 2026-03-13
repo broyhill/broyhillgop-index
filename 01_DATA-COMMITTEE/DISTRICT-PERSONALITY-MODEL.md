@@ -67,6 +67,29 @@ Output:
 - dominant_issue_vector (numeric[10], cluster centroid of Policy_Domain_Vector)
 - channel_weight_vector (numeric[9], optimal channel mix for cluster)
 
+## Cluster Stability Rule
+
+Cluster assignments are frozen during the critical campaign window to prevent optimization destabilization.
+
+| Phase | Window | Cluster Behavior |
+|-------|--------|-----------------|
+| Normal Operations | > 90 days before election | Full reclustering quarterly + event-triggered |
+| Pre-Election Freeze | 90-0 days before election | Cluster IDs frozen. No reassignment. |
+| Override Exception | During freeze | Intelligence Brain can trigger emergency recluster ONLY if Volatility_Index > 85 for a district AND Data Committee Steward approves |
+| Post-Election Reset | After election day | Full recluster with updated election results incorporated |
+
+Rationale: If a district's cluster_id changes 60 days before election, all downstream systems (LP allocation, channel weighting, trigger sequences, candidate Core Donor Files) would need recalibration. The freeze protects candidates from mid-cycle optimization instability.
+
+```json
+{
+  "stability_rule": "cluster_freeze",
+  "freeze_window_days": 90,
+  "override_authority": "Intelligence Brain + Data Committee Steward",
+  "override_condition": "Volatility_Index > 85 for affected district",
+  "post_election_action": "full recluster with election results"
+}
+```
+
 ```json
 {
   "model_name": "District_Personality_Model",

@@ -160,3 +160,53 @@ Owner: Data Committee Steward
   "dependencies": ["Volatility_Index"]
 }
 ```
+
+## Model Drift Monitoring
+
+All production models are subject to automated drift detection. When performance degrades beyond threshold, the system triggers alerts and can auto-rollback to the last known-good version.
+
+### Monitoring Protocol
+
+| Model | Metric | Baseline | Drift Threshold | Rollback Trigger |
+|-------|--------|----------|----------------|-----------------|
+| Donation_Propensity_Model | AUC-ROC | 0.78 | < 0.72 (2 consecutive weeks) | < 0.68 (immediate) |
+| Donor_Clustering_Model | Silhouette Score | 0.45 | < 0.35 (1 month) | < 0.25 (immediate) |
+| Lookalike_Audience_Model | Precision@1000 | 0.15 | < 0.10 (2 weeks) | < 0.07 (immediate) |
+| Lapse_Prediction_Model | Calibration Error | 0.05 | > 0.10 (2 weeks) | > 0.15 (immediate) |
+| Escalation_Predictor_Model | Ordinal Accuracy | 0.62 | < 0.52 (2 weeks) | < 0.45 (immediate) |
+| District_Personality_Model | Intra-cluster Variance | baseline | > 1.5× baseline (quarterly) | > 2× baseline (immediate) |
+
+### Drift Detection Method
+
+```json
+{
+  "monitoring_frequency": "daily",
+  "evaluation_window": "trailing 14 days of predictions vs outcomes",
+  "comparison": "current_metric vs baseline_metric",
+  "alert_channels": ["dashboard_notification", "email_to_data_steward"],
+  "auto_rollback": {
+    "enabled": true,
+    "rollback_to": "last model version where metric >= baseline",
+    "requires_human_approval": false,
+    "logged_to": "audit_log"
+  },
+  "retraining_trigger": {
+    "condition": "drift_threshold breached for 2 consecutive evaluation windows",
+    "action": "queue automatic retrain with latest data",
+    "validation": "holdout set performance must exceed baseline before promotion"
+  }
+}
+```
+
+### Version Control
+
+Every model version is stored with:
+- model_id (uuid)
+- model_name (text)
+- version (semver, e.g., "1.3.2")
+- trained_at (timestamp)
+- training_data_cutoff (date)
+- baseline_metric (numeric)
+- current_metric (numeric)
+- status (enum: active | staged | rolled_back | retired)
+- artifact_path (text, path to serialized model)

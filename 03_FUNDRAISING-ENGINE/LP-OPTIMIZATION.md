@@ -17,6 +17,7 @@ Maximize:
   × District_Modifier_i
   × Authority_Modifier_i
   − Channel_Cost_i
+  − Fatigue_Penalty_i
 )
 ```
 
@@ -26,6 +27,21 @@ Where:
 - District_Modifier_i = District_Personality volatility-adjusted multiplier
 - Authority_Modifier_i = Candidate Authority_Index weight (higher authority → higher expected return)
 - Channel_Cost_i = Cost per contact for the assigned channel
+- Fatigue_Penalty_i = Monotonically increasing cost of over-contacting donor i
+
+## Fatigue Penalty Function
+
+```
+Fatigue_Penalty_i = α × (contacts_trailing_7d / fatigue_threshold)^β
+```
+
+Where:
+- contacts_trailing_7d = total touches across all channels in last 7 days for person i
+- fatigue_threshold = maximum acceptable touches per week (default: 3)
+- α = penalty scaling factor (calibrated per channel)
+- β = convexity exponent (β > 1 ensures accelerating penalty; default: 2.0)
+
+Effect: Penalty is near-zero below threshold, then rises sharply. Prevents LP from concentrating all budget on the top-propensity donors.
 
 ## INPUT TABLES
 - donor_propensity_scores
@@ -75,8 +91,9 @@ Subject to:
 {
   "model_name": "LP_Allocation_Engine",
   "type": "Linear Programming (Simplex/Interior Point)",
-  "objective": "Maximize Σ(ELCV × P(conversion) × district_mod × authority_mod − channel_cost)",
+  "objective": "Maximize Σ(ELCV × P(conversion) × district_mod × authority_mod − channel_cost − fatigue_penalty)",
   "constraints": ["channel_budget", "per_candidate_bounds", "fatigue_threshold", "staff_time", "compliance_envelope", "print_capacity"],
+  "fatigue_penalty": "α × (contacts_7d / threshold)^β, β=2.0, accelerating penalty above 3 touches/week",
   "input_models": ["Donation_Propensity_Model", "Authority_Index", "District_Personality", "Volatility_Index"],
   "output": "budget_allocation_plan",
   "update_frequency": "weekly + surge override"
