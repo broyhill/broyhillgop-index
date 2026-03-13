@@ -1,35 +1,81 @@
-# DISTRICT PERSONALITY MODEL
+Version: v4.0
+Last Updated: March 13, 2026
+Owner: Data Committee Steward
 
-## Overview
+---
 
-Every political district in North Carolina has a quantifiable "personality" — a composite behavioral and demographic profile that predicts how it will respond to different candidates, messages, and fundraising strategies.
+# District Personality Model
+
+## INPUT TABLES
+- nc_voters (9,049,588 rows × 71 cols)
+- nc_datatrust (7,654,883 rows × 251 cols)
+- nc_boe_donations_raw (652,532 rows × 61 cols)
+- fec_donations (1,132,719 rows × 24 cols)
+- Contact response data from E30 (Email), E31 (SMS), E32 (Phone Banking)
+
+## OUTPUT TABLES
+- district_personality_scores
+
+## UPDATE FREQUENCY
+- Quarterly + Event-Triggered
+
+## DEPENDENCIES
+- Volatility_Index
+- Policy_Domain_Vector
 
 ## District Levels
 
-| Level | Count | Source |
-|-------|-------|--------|
-| Congressional | 13 | nc_voters district mapping |
-| State Senate | 50 | nc_voters nc_senate_dist |
-| State House | 120 | nc_voters nc_house_dist |
-| County | 100 | nc_voters county_id |
-| Municipality | 550+ | nc_voters municipality |
-| Precinct | ~2,700 | nc_voters precinct |
-| School Board | 115 | Legislative feed architecture |
+| Level | Count | Source Field |
+|-------|-------|-------------|
+| Congressional | 13 | nc_voters.congressional_dist |
+| State Senate | 50 | nc_voters.nc_senate_dist |
+| State House | 120 | nc_voters.nc_house_dist |
+| County | 100 | nc_voters.county_id |
+| Municipality | 550+ | nc_voters.municipality |
+| Precinct | ~2,700 | nc_voters.precinct |
+| School Board | 115 | Legislative feed mapping |
 
-## Personality Dimensions
+## Dimensions (14)
 
-1. **Partisan Lean** — Republican vote share trend over last 3 cycles
-2. **Turnout Elasticity** — How much turnout changes between presidential and off-year elections
-3. **Donor Density** — Donors per 1,000 registered voters
-4. **Average Gift Size** — Mean donation amount from district residents
-5. **Issue Sensitivity** — Which policy topics drive the most engagement (from E42 News Intelligence sentiment analysis)
-6. **Volatility Score** — How much the district's behavior swings between cycles
-7. **Digital Responsiveness** — Email open rates, SMS response rates, social engagement from the district
+| Dimension | Type | Source |
+|-----------|------|--------|
+| urbanicity_score | numeric, 0-100 | Census + nc_voters address density |
+| affluence_score | numeric, 0-100 | acxiom_consumer_data income/home value aggregate |
+| education_score | numeric, 0-100 | acxiom_consumer_data education level aggregate |
+| religious_intensity_score | numeric, 0-100 | Church density + issue affinity signals |
+| gun_culture_score | numeric, 0-100 | 2A PAC donations + NRA membership proxy |
+| fiscal_conservatism_score | numeric, 0-100 | Tax/spending issue donation patterns |
+| activism_density_score | numeric, 0-100 | Volunteer + event attendance per capita |
+| donor_density | numeric | Donors per 1,000 registered voters |
+| avg_gift_size | numeric | Mean donation amount from district residents |
+| turnout_elasticity | numeric | Presidential vs off-year turnout delta |
+| digital_responsiveness | numeric, 0-100 | Email open + SMS response + social engagement rates |
+| issue_sensitivity_vector | numeric[10] | Policy_Domain_Vector aggregated to district |
+| partisan_lean | numeric | R vote share trailing 3 election cycles |
+| volatility_score | numeric, 0-100 | From Volatility_Index at district level |
 
-## Data Sources
+## District_Cluster_ID
 
-- `nc_voters` (9M rows) — Registration, party, demographics, geographic assignment
-- `nc_datatrust` (7.6M rows) — Modeled scores at individual level, aggregated to district
-- `nc_boe_donations_raw` (652K rows) — Donation patterns by donor geography
-- `fec_donations` (1.1M rows) — Federal giving patterns by ZIP/district
-- Contact response data from E30 (Email), E31 (SMS), E32 (Phone Banking)
+Clustering Method:
+- Algorithm: K-Means (k=10)
+- Inputs: All 14 dimensions above
+- Update Frequency: Quarterly + Event-Triggered
+- Initialization: K-Means++ with 10 random restarts
+
+Output:
+- district_cluster_id (integer, 1-10)
+- dominant_issue_vector (numeric[10], cluster centroid of Policy_Domain_Vector)
+- channel_weight_vector (numeric[9], optimal channel mix for cluster)
+
+```json
+{
+  "model_name": "District_Personality_Model",
+  "type": "K-Means Clustering (k=10)",
+  "input_dimensions": 14,
+  "output_fields": ["district_cluster_id", "dominant_issue_vector", "channel_weight_vector"],
+  "geographic_levels": 7,
+  "total_districts": "~3,548",
+  "update_frequency": "quarterly + event-triggered",
+  "dependencies": ["Volatility_Index", "Policy_Domain_Vector"]
+}
+```

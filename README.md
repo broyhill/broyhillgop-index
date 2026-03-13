@@ -1,24 +1,56 @@
-# BroyhillGOP Index
+Version: v4.0
+Last Updated: March 13, 2026
+Owner: Data Committee Steward
 
-Public documentation index for the BroyhillGOP Political Operating System.
+---
 
-**Live search engine:** [https://broyhill.github.io/broyhillgop-index/](https://broyhill.github.io/broyhillgop-index/)
+# SYSTEM ROLE
 
-This repository serves as a browsable knowledge base for AI assistants (ChatGPT, Claude, Perplexity, etc.) to understand the BroyhillGOP platform architecture, data models, and operational structure.
+Enterprise multi-tenant Republican campaign CRM and optimization engine serving North Carolina GOP operations.
 
-## Quick Stats
-- 58 ecosystems | 657 database tables | 59M rows | 4,071 indexed files
+## CORE GUARANTEE
 
-## Structure
-```
-00_OVERVIEW/       — Mission, system architecture, data governance
-01_DATA-COMMITTEE/ — GOD FILE, master schema, donor state model, district personality
-02_INTELLIGENCE-BRAIN/ — Authority Index, Volatility Index, Policy Domain Vector
-03_FUNDRAISING-ENGINE/ — Donor scoring, ML design, LP optimization, revenue forecast
-04_CANDIDATE-PORTAL/   — Activation pipeline, core donor file, volunteer matching
-05_AUTOMATION/         — Trigger logic, channel weighting, surge detection
-99_CHANGELOG/          — Version history
-```
+- No candidate-to-candidate data leakage (RLS-enforced)
+- Centralized model training on shared data
+- Siloed execution per candidate
+- Compliance-aligned architecture (FEC + NCBOE rules embedded in data model)
 
-## Search Engine
-The `index.html` file is the GOD FILE v4 — a self-contained searchable HTML document indexing all 4,071 platform files across 58 ecosystems. It deploys via GitHub Pages.
+## PRIMARY OBJECTIVE
+
+Maximize revenue velocity for registered Republican campaign committees before election day.
+
+## PLATFORM STATS
+
+- 58 ecosystems | 657 tables | 59,098,347 rows | 11,498 columns
+- 100 populated tables (15.2%) | 557 staged (84.8%)
+- 4,071 indexed files across 83 categories
+
+## SEARCH ENGINE
+
+Live: https://broyhill.github.io/broyhillgop-index/
+
+## NAVIGATION
+
+| Section | Path | Contents |
+|---------|------|----------|
+| Overview | [00_OVERVIEW/](00_OVERVIEW/) | Mission, Architecture, Data Governance, Canonical Objects, Control Layer |
+| Data Committee | [01_DATA-COMMITTEE/](01_DATA-COMMITTEE/) | GOD File, Master Schema, Donor State Model, District Personality, Model Registry |
+| Intelligence Brain | [02_INTELLIGENCE-BRAIN/](02_INTELLIGENCE-BRAIN/) | Authority Index, Volatility Index, Policy Domain Vector |
+| Fundraising Engine | [03_FUNDRAISING-ENGINE/](03_FUNDRAISING-ENGINE/) | Donor Scoring, ML Models, LP Optimization, Revenue Forecast |
+| Candidate Portal | [04_CANDIDATE-PORTAL/](04_CANDIDATE-PORTAL/) | Activation Pipeline, Core Donor File, Volunteer Matching |
+| Automation | [05_AUTOMATION/](05_AUTOMATION/) | Trigger Logic, Channel Weighting, Surge Detection |
+| Changelog | [99_CHANGELOG/](99_CHANGELOG/) | Version History |
+
+## DATA SOURCES
+
+| Source | Table | Rows | Columns |
+|--------|-------|------|---------|
+| NC Voter Registration | nc_voters | 9,049,588 | 71 |
+| DataTrust Voter File | nc_datatrust | 7,654,883 | 251 |
+| Person Master (Golden Record) | person_master | 7,656,550 | 37 |
+| Acxiom Consumer | acxiom_consumer_data | 7,655,559 | 152 |
+| FEC Donations | fec_donations | 1,132,719 | 24 |
+| FEC GOD Contributions | fec_god_contributions | 226,451 | 127 |
+| RNC Voter Core | rnc_voter_core | 1,105,946 | 62 |
+| NCBOE Donations | nc_boe_donations_raw | 652,532 | 61 |
+| WinRed | winred_donors | 194,279 | 26 |

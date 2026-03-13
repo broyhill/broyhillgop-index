@@ -1,39 +1,126 @@
-# ML MODEL DESIGN (E21)
+Version: v4.0
+Last Updated: March 13, 2026
+Owner: Data Committee Steward
+
+---
+
+# ML Model Design (E21)
 
 ## Overview
 
-The Machine Learning layer (Ecosystem 21) provides predictive intelligence across the platform. All models are trained on the 59M-row Supabase database and deployed as scoring functions.
+The Machine Learning layer provides predictive intelligence across the platform. All models train on the 59M-row Supabase database and deploy as scoring functions.
 
-## Active Model Inventory
+See [MODEL-REGISTRY.md](../01_DATA-COMMITTEE/MODEL-REGISTRY.md) for complete JSON specifications of all models.
 
-### 1. Donor Propensity Model
-- **Type:** Gradient boosted classifier
-- **Target:** P(donation in next 90 days)
-- **Features:** 47 features from nc_datatrust, acxiom_consumer_data, prior giving history
-- **Training set:** 226K labeled donors from fec_god_contributions (127 cols)
+## Model Inventory
+
+### 1. Donation Propensity Model
+
+## INPUT TABLES
+- donor_scores
+- donor_faction_scores
+- nc_datatrust
+- donor_contribution_map
+- candidates
+
+## OUTPUT TABLES
+- donor_propensity_scores
+- donor_score_history
+
+## UPDATE FREQUENCY
+- Nightly batch
+
+## DEPENDENCIES
+- Authority_Index
+- District_Personality
+
+Type: Gradient Boosted Classifier
+Target: P(donation in next 90 days)
+Training: 226,451 labeled donors from fec_god_contributions (127 cols)
+Features: 47 features across voter, consumer, and giving history dimensions
 
 ### 2. Donor Clustering
-- **Type:** K-means + hierarchical clustering
-- **Purpose:** Segment donors into behavioral archetypes for targeted messaging
-- **Input:** RFM features + Policy Domain Vector + channel affinity
-- **Clusters:** 12 segments (e.g., "High-value issue donors", "Event-driven social givers", "Digital-first small-dollar recurring")
+
+## INPUT TABLES
+- donor_scores
+- donor_profiles
+- donor_contribution_map
+
+## OUTPUT TABLES
+- donor_clusters
+
+## UPDATE FREQUENCY
+- Weekly batch
+
+## DEPENDENCIES
+- Donor_State
+- Policy_Domain_Vector
+
+Type: K-Means + Hierarchical
+Segments: 12 behavioral archetypes
+Purpose: Segment donors for targeted messaging and channel optimization
 
 ### 3. Lookalike Audience Builder
-- **Type:** Nearest-neighbor in embedding space
-- **Purpose:** Given a seed list of donors, find non-donors who look like them
-- **Universe:** 7.6M person_master records
-- **Output:** Ranked prospect list with similarity scores
+
+## INPUT TABLES
+- person_master (7,656,550 rows)
+- nc_datatrust
+- acxiom_consumer_data
+
+## OUTPUT TABLES
+- lookalike_prospects
+
+## UPDATE FREQUENCY
+- On-demand per campaign
+
+## DEPENDENCIES
+- Person_Master
+- Donor_Clustering_Model
+
+Type: K-Nearest Neighbors in embedding space
+Purpose: Given seed donors, find non-donors who resemble them
+Universe: 7.6M person_master records
 
 ### 4. Lapse Prediction
-- **Type:** Survival analysis / Cox regression
-- **Target:** P(no gift in next 18 months)
-- **Features:** Days since last gift, gift frequency trend, engagement decline signals
-- **Action:** High lapse-risk donors routed to retention trigger sequences
+
+## INPUT TABLES
+- donor_profiles
+- donor_contribution_map
+- donor_contacts
+
+## OUTPUT TABLES
+- donor_lapse_scores
+
+## UPDATE FREQUENCY
+- Nightly batch
+
+## DEPENDENCIES
+- Donor_State
+
+Type: Cox Proportional Hazards / Survival Analysis
+Target: P(no gift in next 18 months)
+Action: High lapse-risk donors routed to retention trigger sequences via E40
 
 ### 5. Escalation Predictor
-- **Type:** Ordinal regression
-- **Target:** Next giving tier ($25→$100→$500→$1000→$2800)
-- **Features:** Giving trajectory, capacity indicators, ask-amount response history
+
+## INPUT TABLES
+- donor_profiles
+- donor_contribution_map
+- donor_scores
+
+## OUTPUT TABLES
+- donor_escalation_scores
+
+## UPDATE FREQUENCY
+- Nightly batch
+
+## DEPENDENCIES
+- Donor_State
+- Donation_Propensity_Model
+
+Type: Ordinal Regression
+Target: Next giving tier ($25 → $100 → $500 → $1,000 → $2,800)
+Features: Giving trajectory, capacity indicators, ask-amount response history
 
 ## Data Pipeline
 ```

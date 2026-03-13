@@ -1,3 +1,9 @@
+Version: v4.0
+Last Updated: March 13, 2026
+Owner: Data Committee Steward
+
+---
+
 # BroyhillGOP Political Operating System Index
 
 ## SYSTEM ROLE

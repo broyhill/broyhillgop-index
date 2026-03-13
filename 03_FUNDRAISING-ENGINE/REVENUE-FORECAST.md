@@ -1,39 +1,71 @@
-# REVENUE FORECAST
+Version: v4.0
+Last Updated: March 13, 2026
+Owner: Data Committee Steward
 
-## Purpose
+---
 
-Project total fundraising revenue by candidate, channel, and time period. The forecast drives budget planning, staffing decisions, and expectation-setting with candidates and party leadership.
+# Revenue Forecast
 
-## Methodology
+## Formula
 
-### Bottom-Up Forecast
 ```
-Revenue(c, t) = Σ_segment [ donor_count(seg) × P(donate | seg, c, t) × E[amount | seg, c, t] ]
+Revenue(c, t) = Σ_segment [
+  donor_count(seg)
+  × P(donate | seg, c, t)
+  × E[amount | seg, c, t]
+  × seasonality_multiplier(t)
+]
 ```
 
-For each donor segment:
-1. **Count** active donors in the segment from donor_profiles
-2. **Probability** of giving in period t from the Donor Propensity Model
-3. **Expected amount** from historical average adjusted by Escalation Predictor
+Where:
+- donor_count(seg): Active donors in segment from donor_clusters
+- P(donate): From Donation_Propensity_Model
+- E[amount]: Historical average adjusted by Escalation_Predictor output
+- seasonality_multiplier: Time-period weight (election proximity, year-end, filing deadlines)
 
-### Top-Down Cross-Check
-- Historical revenue by cycle (2020, 2022, 2024) adjusted for candidate strength and environment
-- Comparable race analysis using Authority Index and Volatility Index
+## INPUT TABLES
+- donor_profiles (~170K active donors)
+- donor_clusters (12 segments)
+- donor_propensity_scores
+- donor_escalation_scores
+- fec_donations (1,132,719 rows)
+- nc_boe_donations_raw (652,532 rows)
+- candidates (2,303 rows)
+- campaign_finance_summary
 
-## Data Inputs
+## OUTPUT TABLES
+- revenue_forecast_monthly
+- revenue_forecast_by_candidate
 
-| Input | Source | Rows |
-|-------|--------|------|
-| Donor segments | donor_profiles | ~170K active donors |
-| Historical giving | fec_donations + nc_boe_donations_raw | 1.78M transactions |
-| Propensity scores | ML model output | 7.6M scored persons |
-| Seasonality curves | Historical daily donation patterns | 6 years of data |
-| Candidate pipeline | candidates table | 2,303 candidate records |
+## UPDATE FREQUENCY
+- Monthly refresh
+- Event-triggered recalculation (new candidate, surge event)
 
-## Output
+## DEPENDENCIES
+- Donation_Propensity_Model
+- Escalation_Predictor_Model
+- Donor_Clustering_Model
+- Campaign_Context
 
-Monthly revenue projection by:
+## Output Dimensions
+
+Monthly projection segmented by:
 - Candidate (or candidate group)
 - Channel (mail, digital, email, event, phone)
 - Donor tier (small-dollar, mid-level, major, max-out)
 - Confidence interval (P10, P50, P90)
+
+## Cross-Check
+
+Top-down validation against historical revenue by cycle (2020, 2022, 2024) adjusted for candidate Authority_Index and Volatility_Index environment.
+
+```json
+{
+  "model_name": "Revenue_Forecast",
+  "type": "Bottom-up segment aggregation with top-down cross-check",
+  "formula": "Σ(count × P(donate) × E[amount] × seasonality)",
+  "output": "Monthly revenue by candidate × channel × tier with P10/P50/P90",
+  "update_frequency": "monthly + event-triggered",
+  "dependencies": ["Donation_Propensity_Model", "Escalation_Predictor_Model", "Donor_Clustering_Model"]
+}
+```

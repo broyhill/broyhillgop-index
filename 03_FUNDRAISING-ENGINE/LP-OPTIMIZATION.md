@@ -1,8 +1,54 @@
-# LINEAR PROGRAMMING ALLOCATION ENGINE
+Version: v4.0
+Last Updated: March 13, 2026
+Owner: Data Committee Steward
 
-## Purpose
+---
 
-The LP engine solves the budget allocation problem: given a fixed fundraising budget, how should dollars be distributed across channels, candidates, and time periods to maximize total return?
+# Linear Programming Allocation Engine
+
+## Objective Function
+
+Maximize:
+
+```
+Σ_i (
+  ELCV_i
+  × Conversion_Probability_i
+  × District_Modifier_i
+  × Authority_Modifier_i
+  − Channel_Cost_i
+)
+```
+
+Where:
+- ELCV_i = Expected Lifetime Contribution Value for contact i
+- Conversion_Probability_i = P(donation | contact, channel, timing) from Donation_Propensity_Model
+- District_Modifier_i = District_Personality volatility-adjusted multiplier
+- Authority_Modifier_i = Candidate Authority_Index weight (higher authority → higher expected return)
+- Channel_Cost_i = Cost per contact for the assigned channel
+
+## INPUT TABLES
+- donor_propensity_scores
+- donor_profiles
+- district_personality_scores
+- authority_scores
+- campaign_finance_summary
+- channel_cost_rates
+
+## OUTPUT TABLES
+- budget_allocation_plan
+- channel_assignment_queue
+
+## UPDATE FREQUENCY
+- Weekly optimization cycle
+- Real-time surge override (Level 2+)
+
+## DEPENDENCIES
+- Donation_Propensity_Model
+- Authority_Index
+- Volatility_Index
+- District_Personality
+- Channel_Weighting
 
 ## Decision Variables
 
@@ -15,29 +61,24 @@ The LP engine solves the budget allocation problem: given a fixed fundraising bu
 | x_digital(c,t) | Digital ad spend for candidate c in period t |
 | x_event(c,t) | Event spend for candidate c in period t |
 
-## Objective Function
-
-Maximize total expected revenue:
-```
-max Σ_c Σ_t Σ_ch [ ROI(c, ch) × x_ch(c, t) × seasonality(t) × volatility_boost(c) ]
-```
-
-Where:
-- ROI(c, ch) = historical return on investment for candidate c in channel ch
-- seasonality(t) = time-period multiplier (donations spike near elections, year-end, filing deadlines)
-- volatility_boost(c) = multiplier for high-volatility races where marginal dollars have outsized impact
-
 ## Constraints
 
-1. **Budget:** Σ all x ≤ total_budget
-2. **Per-candidate min/max:** min_spend(c) ≤ Σ_ch x_ch(c,t) ≤ max_spend(c)
-3. **Channel capacity:** x_ch ≤ channel_capacity (e.g., can't send more mail than the print vendor can produce)
-4. **Compliance:** Coordinated expenditure limits per FEC rules
-5. **Fatigue:** Contact frequency caps per donor per channel per week
+Subject to:
+1. **Channel_Budget:** Σ_ch x_ch(c,t) ≤ total_budget
+2. **Per-Candidate Bounds:** min_spend(c) ≤ Σ_ch x_ch(c,t) ≤ max_spend(c)
+3. **Contact_Fatigue_Threshold:** ≤ 3 touches per donor per channel per week
+4. **Staff_Time_Constraint:** Phone banking hours ≤ available agent hours
+5. **Compliance_Envelope:** Coordinated expenditure limits per FEC rules
+6. **Print_Capacity:** x_mail ≤ vendor production capacity per period
 
-## Inputs from Other Engines
-
-- **Donor Scoring** → Expected response rates per segment per channel
-- **Authority Index** → Candidate viability weighting
-- **Volatility Index** → Opportunity multiplier for marginal races
-- **District Personality** → Channel preference by geography
+```json
+{
+  "model_name": "LP_Allocation_Engine",
+  "type": "Linear Programming (Simplex/Interior Point)",
+  "objective": "Maximize Σ(ELCV × P(conversion) × district_mod × authority_mod − channel_cost)",
+  "constraints": ["channel_budget", "per_candidate_bounds", "fatigue_threshold", "staff_time", "compliance_envelope", "print_capacity"],
+  "input_models": ["Donation_Propensity_Model", "Authority_Index", "District_Personality", "Volatility_Index"],
+  "output": "budget_allocation_plan",
+  "update_frequency": "weekly + surge override"
+}
+```
