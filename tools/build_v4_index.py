@@ -10,9 +10,11 @@ What it does (re-runnable; original v4 entries are never dropped):
   C. Every entry gets a real URL: GitHub blob link when the file exists in the repo, otherwise a
      Google Drive search for the file name. file:// links are gone. COPY still copies the path.
 
-Usage:
+Usage (any workstation; reads two local files, writes index.html; no network, no database):
   git -C <BroyhillGOP clone> ls-tree -r -z --name-only HEAD > repo_files.z
   python3 tools/build_v4_index.py --repo-list repo_files.z --repo-sha <sha> [--html index.html]
+This repo is reference-only for the platform (no DB connections); the script only regenerates
+the static index page that Vercel serves from this repo.
 """
 import argparse
 import datetime as dt
@@ -87,29 +89,41 @@ def load_array(html, name, opener, closer):
 def normalize_old(f):
     """The 55 entries with the n/s/m/t schema (no cat/path/src) get the standard schema."""
     if "path" in f and "cat" in f and "src" in f:
+        if f["path"].endswith("/") or f.get("ext") == "dir":
+            f["n"] = f["path"].rstrip("/").rsplit("/", 1)[-1] + "/"
+            f["ext"] = "dir"
         f.setdefault("ext", ext_of(f.get("n", "")))
         return f
     p = f.get("path") or f.get("n", "")
     cat = f.get("cat") or eco_from_path(p) or "OTHER"
     src = f.get("src") or (p.split("/", 1)[0] if "/" in p else "Local")
+    is_dir = p.endswith("/") or f.get("t") == "dir"
+    name = p.rstrip("/").rsplit("/", 1)[-1] + ("/" if is_dir else "")
     return {
-        "cat": cat, "n": p.rsplit("/", 1)[-1], "ext": f.get("ext") or f.get("t") or ext_of(p),
+        "cat": cat, "n": name, "ext": "dir" if is_dir else (f.get("ext") or f.get("t") or ext_of(p)),
         "s": f.get("s", 0), "path": p, "src": src, "tags": words(p),
     }
 
 
 def best_repo_match(old_path, candidates):
-    """Pick the repo path sharing the longest trailing path with the old Mac path."""
-    old = [s.lower() for s in old_path.split("/")]
+    """Repo path sharing the longest trailing path with the old Mac path, or None.
 
-    def score(c):
+    A bare file-name collision is not a match unless that name occurs exactly once in the repo;
+    otherwise at least the parent folder name must agree too (README.md, schema.sql, index.html...).
+    """
+    old = [s.lower() for s in old_path.rstrip("/").split("/")]
+
+    def shared(c):
         cs = [s.lower() for s in c.split("/")]
         k = 0
         while k < min(len(cs), len(old)) and cs[-1 - k] == old[-1 - k]:
             k += 1
-        return (k, -len(c))
+        return k
 
-    return max(candidates, key=score)
+    best = max(candidates, key=lambda c: (shared(c), -len(c)))
+    if shared(best) >= 2 or len(candidates) == 1:
+        return best
+    return None
 
 
 NEW_RENDER = r"""/*V4R-START*/
@@ -119,6 +133,7 @@ function escH(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;'
 const GHB='https://github.com/broyhill/BroyhillGOP/blob/main/',GDS='https://drive.google.com/drive/search?q=';
 F.forEach(f=>{
   if(!f.n)f.n=f.path.split('/').pop();
+  if(!f.n)f.n=f.path.replace(/\/+$/,'').split('/').pop()+'/';
   const g=f.g===1?f.path:f.g;
   f.u=g?GHB+g.split('/').map(encodeURIComponent).join('/'):GDS+encodeURIComponent(f.n);
   f.lk=g?'gh':'gd';
@@ -245,9 +260,9 @@ def main():
     linked = set()
     gh_old = 0
     for f in old:
-        cands = by_base.get(f["n"].lower())
-        if cands:
-            hit = best_repo_match(f["path"], cands)
+        cands = None if f.get("ext") == "dir" else by_base.get(f["n"].lower())
+        hit = best_repo_match(f["path"], cands) if cands else None
+        if hit:
             f["g"] = hit  # repo path; the page builds the GitHub URL
             linked.add(hit)
             gh_old += 1
@@ -255,8 +270,6 @@ def main():
 
     new = []
     for p in repo:
-        if p in linked:
-            continue
         top = p.split("/", 1)[0] if "/" in p else "(root)"
         cat = eco_from_path(p) or ("GH_" + re.sub(r"[^A-Za-z0-9]+", "_", top).strip("_").upper())
         # compact: n/size/tags are derived in the page; g=1 means path IS the repo path
@@ -312,6 +325,7 @@ def main():
         "repo_files_total": len(repo_all),
         "repo_files_after_quality_filter": len(repo),
         "repo_files_added": len(new),
+        "repo_files_also_linked_from_originals": len(linked),
         "total_entries": len(allf),
         "categories": cats,
         "md": ext["md"], "sql": ext["sql"],
