@@ -17,9 +17,9 @@
 Also fixed: 55 original entries used a different schema (no `cat`/`path`/`src`), which broke grouping and made the source filter throw. They are normalized; the 18 folder rows among them show the folder name.
 
 ## Numbers (from the build run)
-- Original v4 entries kept: 4,071 — linked to GitHub: 279 — Drive-search fallback: 3,792
+- Original v4 entries kept: 4,071 — linked to GitHub: 311 (279 folder-confirmed + 32 unique-name with exact size match) — Drive-search fallback: 3,760
 - An original links to GitHub only when its parent folder also matches the repo copy, or its file name occurs exactly once in the indexed repo files AND its v4 size equals the repo blob size. A bare name collision (deploy.sh, README.md, schema.sql) never counts — a first pass of 1,380 name-only links was wrong in cases like four unrelated `deploy.sh` files all opening `config/deploy.sh` (Devin + Vercel review, PR #1)
-- Repo files: 60,466 total → 47,301 after the quality filter → all 47,301 added (238 of them are also the target of an original entry)
+- Repo files: 60,466 total → 47,301 after the quality filter → all 47,301 added (264 of them are also the target of an original entry)
 - 217 categories · 20,964 MD · 3,181 SQL
 - Page: 9.07 MB raw, ~776 KB gzipped (was 1.25 MB with 4k entries); load + first render under 1 s headless
 
@@ -38,7 +38,7 @@ python3 tools/build_v4_index.py --repo-list repo_files.z --repo-sizes repo_sizes
 Re-runs are byte-identical for the same inputs. Original v4 entries are never dropped; GitHub entries are rebuilt from the list.
 
 ## Known limits
-- DRIVE fallback is a name search in Ed's Drive, not a direct file link: the Drive connector returns ~5 files per call, so a full Drive walk (~1,000 calls) was not done. Those 3,792 originals open only if a copy with that name is in Drive; many also have a same-name repo file (different folder, or under the excluded `archive/`), findable by searching the page.
+- DRIVE fallback is a name search in Ed's Drive, not a direct file link: the Drive connector returns ~5 files per call, so a full Drive walk (~1,000 calls) was not done. Those 3,760 originals open only if a copy with that name is in Drive; many also have a same-name repo file (different folder, or under the excluded `archive/`), findable by searching the page.
 - GitHub links open only for accounts with access to the private `broyhill/BroyhillGOP` repo; Drive links only for Ed's Google account.
 - Repo files carry no size or date (blobless clone); originals keep their v4 size.
 - The site is public (no Vercel protection). It now lists ~47k repo file paths; it already listed 4k Mac paths before this change.
