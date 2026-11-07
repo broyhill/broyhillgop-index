@@ -37,7 +37,7 @@ python3 tools/build_v4_index.py --repo-list repo_files.z --repo-sha $(git -C <cl
 Re-runs are byte-identical for the same inputs. Original v4 entries are never dropped; GitHub entries are rebuilt from the list.
 
 ## Known limits
-- DRIVE fallback is a name search in Ed's Drive, not a direct file link: the Drive connector returns ~5 files per call, so a full Drive walk (~1,000 calls) was not done. Those 3,705 originals open only if a copy with that name is in Drive (most also have a same-name file in the repo, findable by searching the page).
+- DRIVE fallback is a name search in Ed's Drive, not a direct file link: the Drive connector returns ~5 files per call, so a full Drive walk (~1,000 calls) was not done. Those 3,705 originals open only if a copy with that name is in Drive (1,014 of them also have a same-name file in the repo with a different folder, findable by searching the page).
 - GitHub links open only for accounts with access to the private `broyhill/BroyhillGOP` repo; Drive links only for Ed's Google account.
 - Repo files carry no size or date (blobless clone); originals keep their v4 size.
 - The site is public (no Vercel protection). It now lists ~47k repo file paths; it already listed 4k Mac paths before this change.
