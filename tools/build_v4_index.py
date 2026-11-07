@@ -10,9 +10,12 @@ What it does (re-runnable; original v4 entries are never dropped):
   C. Every entry gets a real URL: GitHub blob link when the file exists in the repo, otherwise a
      Google Drive search for the file name. file:// links are gone. COPY still copies the path.
 
-Usage (any workstation; reads two local files, writes index.html; no network, no database):
+Usage (any workstation; reads local files, writes index.html; no network, no database):
   git -C <BroyhillGOP clone> ls-tree -r -z --name-only HEAD > repo_files.z
-  python3 tools/build_v4_index.py --repo-list repo_files.z --repo-sha <sha> [--html index.html]
+  git -C <BroyhillGOP clone> ls-tree -r -l HEAD | awk -F'\t' '{split($1,a," "); print a[4]"\t"$2}' > repo_sizes.tsv
+  python3 tools/build_v4_index.py --repo-list repo_files.z --repo-sizes repo_sizes.tsv --repo-sha <sha>
+(--repo-sizes may list only some paths; an original whose only evidence is a unique file name is
+linked only when its v4 size equals the repo blob size.)
 This repo is reference-only for the platform (no DB connections); the script only regenerates
 the static index page that Vercel serves from this repo.
 """
@@ -105,11 +108,12 @@ def normalize_old(f):
     }
 
 
-def best_repo_match(old_path, candidates):
-    """Repo path sharing the longest trailing path with the old Mac path, or None.
+def best_repo_match(old_path, candidates, old_size=0, sizes=None):
+    """Repo path that is the same file as the old Mac path, or None.
 
-    A bare file-name collision is not a match unless that name occurs exactly once in the repo;
-    otherwise at least the parent folder name must agree too (README.md, schema.sql, index.html...).
+    Evidence accepted: the parent folder name agrees too, or the name occurs exactly once in the
+    repo AND the v4 size equals the repo blob size. A bare name collision (deploy.sh, README.md)
+    is never a match.
     """
     old = [s.lower() for s in old_path.rstrip("/").split("/")]
 
@@ -121,7 +125,9 @@ def best_repo_match(old_path, candidates):
         return k
 
     best = max(candidates, key=lambda c: (shared(c), -len(c)))
-    if shared(best) >= 2 or len(candidates) == 1:
+    if shared(best) >= 2:
+        return best
+    if len(candidates) == 1 and old_size and sizes and sizes.get(best) == old_size:
         return best
     return None
 
@@ -238,6 +244,7 @@ def main():
     ap.add_argument("--html", default="index.html")
     ap.add_argument("--repo-list", required=True, help="git ls-tree -r -z --name-only output")
     ap.add_argument("--repo-sha", required=True)
+    ap.add_argument("--repo-sizes", help="size<TAB>path lines (git ls-tree -l); enables size-proven name matches")
     a = ap.parse_args()
 
     html = open(a.html, encoding="utf-8").read()
@@ -253,6 +260,14 @@ def main():
     repo_all = [p for p in raw.split("\0") if p]
     repo = [p for p in repo_all if keep_repo_file(p)]
 
+    sizes = {}
+    if a.repo_sizes:
+        for line in open(a.repo_sizes, encoding="utf-8"):
+            if "\t" in line:
+                sz, path = line.rstrip("\n").split("\t", 1)
+                if sz.isdigit():
+                    sizes[path] = int(sz)
+
     by_base = defaultdict(list)
     for p in repo:
         by_base[p.rsplit("/", 1)[-1].lower()].append(p)
@@ -261,7 +276,7 @@ def main():
     gh_old = 0
     for f in old:
         cands = None if f.get("ext") == "dir" else by_base.get(f["n"].lower())
-        hit = best_repo_match(f["path"], cands) if cands else None
+        hit = best_repo_match(f["path"], cands, int(f.get("s") or 0), sizes) if cands else None
         if hit:
             f["g"] = hit  # repo path; the page builds the GitHub URL
             linked.add(hit)
