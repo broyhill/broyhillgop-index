@@ -306,6 +306,9 @@ def main():
            f'<span class="tag gd">Google Drive</span> <span class="tag nc">GitHub @ {a.repo_sha[:7]}</span> &bull; '
            f'{len(allf):,} files &bull; {cats} categories &bull; {ext["md"]:,} MD &bull; {ext["sql"]:,} SQL</div>')
     html = re.sub(r'<div class="sub">Updated .*?</div>', lambda _: sub, html, count=1)
+    # Search placeholder count (computed, not typed; was stuck at "4,010")
+    html = re.sub(r'placeholder="Search [\d,]+ files\.\.\.', lambda _: f'placeholder="Search {len(allf):,} files...',
+                  html, count=1)
     note = ('<div class="sub" style="margin-top:6px;color:var(--green);font-size:11px">Click any file to open it: '
             '<b>GH</b> opens it on GitHub, <b>DRIVE</b> searches your Google Drive for it. COPY still grabs the path.</div>')
     html = re.sub(r'<div class="sub" style="margin-top:6px;color:var\(--green\);font-size:11px">.*?</div>',
